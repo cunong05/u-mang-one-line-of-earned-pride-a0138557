@@ -23,12 +23,21 @@ if (!ENTRY.trim()) {
 if (/\n/.test(ENTRY)) {
   throw new Error("entry must be a single line");
 }
+// Guard: no leading or trailing whitespace (the entry is used verbatim).
+if (ENTRY !== ENTRY.trim()) {
+  throw new Error("entry must not have leading or trailing whitespace");
+}
 
 mkdirSync(dirname(OUTPUT_PATH), { recursive: true });
 writeFileSync(OUTPUT_PATH, ENTRY, "utf8");
 
-// Gate: re-read the written file and verify its sha256 exactly.
+// Gate: the written bytes must be exactly the entry, byte for byte.
 const written = readFileSync(OUTPUT_PATH);
+if (written.length !== Buffer.byteLength(ENTRY, "utf8")) {
+  throw new Error(
+    `byte length mismatch for ${OUTPUT_PATH}: expected ${Buffer.byteLength(ENTRY, "utf8")}, got ${written.length}`,
+  );
+}
 const actualSha256 = createHash("sha256").update(written).digest("hex");
 if (actualSha256 !== EXPECTED_SHA256) {
   throw new Error(
